@@ -15,7 +15,7 @@ interface ParticlesProps {
 
 export default function Particles({
   className = "",
-  quantity = 30,
+  quantity = 20,
   staticity = 50,
   ease = 50,
   refresh = false,
@@ -32,8 +32,20 @@ export default function Particles({
   const canvasSize = useRef<{ w: number; h: number }>({ w: 0, h: 0 });
   const dpr = typeof window !== "undefined" ? window.devicePixelRatio : 1;
 
+  const isVisible = useRef(true);
+
   useEffect(() => {
-    if (isBlogPost) return
+    if (isBlogPost || !canvasContainerRef.current) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        isVisible.current = entry.isIntersecting;
+      },
+      { threshold: 0 }
+    );
+
+    observer.observe(canvasContainerRef.current);
+
     if (canvasRef.current) {
       context.current = canvasRef.current.getContext("2d");
     }
@@ -43,6 +55,7 @@ export default function Particles({
 
     return () => {
       window.removeEventListener("resize", initCanvas);
+      observer.disconnect();
     };
   }, [isBlogPost]);
 
@@ -173,6 +186,10 @@ export default function Particles({
   };
 
   const animate = () => {
+    if (!isVisible.current) {
+      window.requestAnimationFrame(animate);
+      return;
+    }
     clearContext();
     circles.current.forEach((circle: Circle, i: number) => {
       // Handle the alpha value
