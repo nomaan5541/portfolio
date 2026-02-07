@@ -34,7 +34,8 @@ const EMPTY = {} as {
   y: Function;
   r?: Function;
   width?: Function;
-  rt?: Function;
+  dotX?: Function;
+  dotY?: Function;
   sx?: Function;
   sy?: Function;
 };
@@ -87,6 +88,7 @@ function ElasticCursor() {
   const pos = useInstance(() => ({ x: 0, y: 0 }));
   const vel = useInstance(() => ({ x: 0, y: 0 }));
   const set = useInstance();
+  const dotRef = useRef<HTMLDivElement>(null);
 
   // Set GSAP quick setter Values on useLayoutEffect Update
   useLayoutEffect(() => {
@@ -96,11 +98,13 @@ function ElasticCursor() {
     set.sx = gsap.quickSetter(jellyRef.current, "scaleX");
     set.sy = gsap.quickSetter(jellyRef.current, "scaleY");
     set.width = gsap.quickSetter(jellyRef.current, "width", "px");
+    set.dotX = gsap.quickSetter(dotRef.current, "x", "px");
+    set.dotY = gsap.quickSetter(dotRef.current, "y", "px");
   }, []);
 
   // Start Animation loop
   const loop = useCallback(() => {
-    if (!set.width || !set.sx || !set.sy || !set.r) return;
+    if (!set.width || !set.sx || !set.sy || !set.r || !set.dotX || !set.dotY) return;
     // Calculate angle and scale based on velocity
     var rotation = getAngle(+vel.x, +vel.y); // Mouse Move Angle
     var scale = getScale(+vel.x, +vel.y); // Blob Squeeze Amount
@@ -128,6 +132,13 @@ function ElasticCursor() {
       if (!cursorMoved) {
         setCursorMoved(true);
       }
+
+      // Update dot position immediately via quickSetter
+      if (set.dotX && set.dotY) {
+        set.dotX(e.clientX);
+        set.dotY(e.clientY);
+      }
+
       const el = e.target as HTMLElement;
       const hoverElemRect = getRekt(el);
       if (hoverElemRect) {
@@ -143,8 +154,8 @@ function ElasticCursor() {
           x: rect.left + rect.width / 2,
           y: rect.top + rect.height / 2,
           borderRadius: 10,
-          duration: 1.5,
-          ease: "elastic.out(1, 0.3)",
+          duration: 0.6,
+          ease: "back.out(1.7)",
         });
 
         // return;
@@ -164,13 +175,13 @@ function ElasticCursor() {
       gsap.to(pos, {
         x: x,
         y: y,
-        duration: 1.5,
-        ease: "elastic.out(1, 0.5)",
+        duration: 0.4,
+        ease: "power2.out",
         onUpdate: () => {
           // @ts-ignore
-          vel.x = (x - pos.x) * 1.2;
+          vel.x = (x - pos.x) * 1.5;
           // @ts-ignore
-          vel.y = (y - pos.y) * 1.2;
+          vel.y = (y - pos.y) * 1.5;
         },
       });
 
@@ -210,11 +221,11 @@ function ElasticCursor() {
         }}
       ></div>
       <div
-        className="w-3 h-3 rounded-full fixed translate-x-[-50%] translate-y-[-50%] pointer-events-none transition-none duration-300"
+        ref={dotRef}
+        className="w-3 h-3 rounded-full fixed left-0 top-0 pointer-events-none transition-none will-change-transform translate-x-[-50%] translate-y-[-50%]"
         style={{
-          top: y,
-          left: x,
           backdropFilter: "invert(100%)",
+          zIndex: 101,
         }}
       ></div>
     </>
